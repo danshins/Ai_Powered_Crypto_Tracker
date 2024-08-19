@@ -20,17 +20,8 @@ def fetch_crypto_data():
     }
     response = requests.get(url, params=params)
     data = response.json()
-
-    # Convert the data to a DataFrame and handle missing columns
-    df = pd.DataFrame(data)
-
-    # Ensure all required columns exist, otherwise fill with NaN
-    columns_needed = ['id', 'symbol', 'current_price', 'market_cap', 'total_volume', 'price_change_percentage_24h']
-    for col in columns_needed:
-        if col not in df.columns:
-            df[col] = None
-
-    return df[columns_needed]
+    return pd.DataFrame(data)[
+        ['id', 'symbol', 'current_price', 'market_cap', 'total_volume', 'price_change_percentage_24h']]
 
 
 # Function to fetch historical price data for LSTM model
@@ -134,21 +125,14 @@ st.plotly_chart(fig)
 
 
 # Calculate and plot Simple Moving Averages (SMA)
-# Calculate Simple Moving Averages (SMA)
 def calculate_sma(data, window):
     return data.rolling(window=window).mean()
 
+
 crypto_df['SMA_7'] = calculate_sma(crypto_df['current_price'], 7)
 crypto_df['SMA_30'] = calculate_sma(crypto_df['current_price'], 30)
-
-# Fill NaN values with a suitable value (e.g., forward fill or 0)
 crypto_df['SMA_7'].fillna(method='ffill', inplace=True)
 crypto_df['SMA_30'].fillna(method='ffill', inplace=True)
-
-# Ensure all columns are numeric
-crypto_df['current_price'] = pd.to_numeric(crypto_df['current_price'], errors='coerce')
-crypto_df['SMA_7'] = pd.to_numeric(crypto_df['SMA_7'], errors='coerce')
-crypto_df['SMA_30'] = pd.to_numeric(crypto_df['SMA_30'], errors='coerce')
 
 # Plot SMAs and current prices
 fig = px.line(
@@ -159,6 +143,24 @@ fig = px.line(
 )
 st.plotly_chart(fig)
 
+# LSTM Model Section in the Sidebar
+st.sidebar.header("LSTM Price Prediction")
+
+if st.sidebar.button("Train LSTM Model"):
+    st.subheader(f"Training LSTM Model for {selected_crypto}...")
+
+    # Fetch historical data and train the LSTM model
+    try:
+        historical_data = fetch_historical_data(selected_crypto, 365)  # Fetch 1 year of data
+        X_train, y_train, scaler = preprocess_data(historical_data)
+        model = build_lstm_model((X_train.shape[1], 1))
+        model.fit(X_train, y_train, batch_size=1, epochs=1)
+
+        # Predict the next day's price
+        predicted_price = predict_prices(model, historical_data, scaler)
+        st.subheader(f"Predicted Price for Tomorrow: ${predicted_price:.2f}")
+    except Exception as e:
+        st.error(f"An error occurred during model training or prediction: {str(e)}")
 
 # Set Price Alerts
 st.sidebar.header("Set Price Alerts")
