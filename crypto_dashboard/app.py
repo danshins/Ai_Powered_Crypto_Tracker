@@ -8,6 +8,12 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 
 
+# Set page configuration
+st.set_page_config(
+    page_title="Crypto Investment Dashboard",  # Title that appears on the browser tab
+    page_icon="💰",  # Favicon (emoji or file path)
+)
+
 # Function to fetch cryptocurrency data from CoinGecko API
 def fetch_crypto_data():
     url = "https://api.coingecko.com/api/v3/coins/markets"
